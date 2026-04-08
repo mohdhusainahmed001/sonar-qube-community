@@ -2,13 +2,13 @@ pipeline {
     agent any
 
     tools {
-        // This must match the 'Name' you gave Maven in Manage Jenkins > Tools
+        // Must match the 'Name' in Manage Jenkins > Tools
         maven 'Maven3'
     }
 
     environment {
-        // Defines the SonarQube server name configured in Manage Jenkins > System
-        SONAR_SERVER_NAME = 'SonarQube'
+        // UPDATED: Now matches your specific server name in Jenkins System settings
+        SONAR_SERVER_NAME = 'sonar-token'
     }
 
     stages {
@@ -20,24 +20,22 @@ pipeline {
 
         stage('Build & Test') {
             steps {
-                // Generates the classes SonarQube needs for analysis
                 sh 'mvn clean compile test'
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-                // This block injects the server URL and Secret Token automatically
+                // Uses the 'sonar-token' installation name
                 withSonarQubeEnv("${SONAR_SERVER_NAME}") {
-                    sh 'mvn sonar:sonar'
+                    // Force the token injection into the Maven command
+                    sh 'mvn sonar:sonar -Dsonar.token=${SONAR_AUTH_TOKEN}'
                 }
             }
         }
 
         stage("Quality Gate") {
             steps {
-                // Optional: Pipeline waits for SonarQube to finish calculating metrics
-                // Requires a Webhook configured in SonarQube
                 timeout(time: 5, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
@@ -47,14 +45,13 @@ pipeline {
 
     post {
         always {
-            // Clean up workspace after build
             cleanWs()
         }
         success {
             echo 'Build and Analysis completed successfully!'
         }
         failure {
-            echo 'Build failed. Check the logs and SonarQube connectivity.'
+            echo 'Build failed. Check the name configuration or credentials.'
         }
     }
 }
