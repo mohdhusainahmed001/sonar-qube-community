@@ -2,12 +2,12 @@ pipeline {
     agent any
 
     tools {
-        // Must match the 'Name' in Manage Jenkins > Tools
+        // Match the Name in Manage Jenkins > Tools
         maven 'Maven3'
     }
 
     environment {
-        // UPDATED: Now matches your specific server name in Jenkins System settings
+        // Match the Name in Manage Jenkins > System
         SONAR_SERVER_NAME = 'sonar-token'
     }
 
@@ -26,9 +26,8 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                // Uses the 'sonar-token' installation name
                 withSonarQubeEnv("${SONAR_SERVER_NAME}") {
-                    // Force the token injection into the Maven command
+                    // Using the injected token for guaranteed authorization
                     sh 'mvn sonar:sonar -Dsonar.token=${SONAR_AUTH_TOKEN}'
                 }
             }
@@ -36,6 +35,7 @@ pipeline {
 
         stage("Quality Gate") {
             steps {
+                // Ensure SonarQube Webhook is set to: http://<jenkins-ip>:8080/sonarqube-webhook/
                 timeout(time: 5, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
@@ -48,10 +48,10 @@ pipeline {
             cleanWs()
         }
         success {
-            echo 'Build and Analysis completed successfully!'
+            echo 'Pipeline completed! Check your results at http://localhost:9000'
         }
         failure {
-            echo 'Build failed. Check the name configuration or credentials.'
+            echo 'Pipeline failed. Check SonarQube permissions for project com.onextel:my-app'
         }
     }
 }
